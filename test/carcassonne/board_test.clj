@@ -27,22 +27,24 @@
 (defn is-space-on-board? [space]
   (nil? (some (fn [board-space] (same-space? space board-space)) @board)))
 
-(defn add-to-available-spaces [new-spaces]
+(defn add-to-available-spaces [new-spaces available-spaces]
   (let [new-spaces-not-on-board (select is-space-on-board? new-spaces)]
-    (reset! available-spaces (union @available-spaces new-spaces-not-on-board))))
+    (union available-spaces new-spaces-not-on-board)))
 
-(defn remove-from-available-spaces [space]
+(defn remove-from-available-spaces [space available-spaces]
   (let [tiles-not-matching-space #(not (same-space? space %))]
-    (reset! available-spaces (select tiles-not-matching-space @available-spaces))))
+    (select tiles-not-matching-space available-spaces)))
 
 (defn add-first-tile-to-board [tile]
   (swap! board conj tile)
-  (add-to-available-spaces (surrounding-spaces tile)))
+  (reset! available-spaces (add-to-available-spaces (surrounding-spaces tile) @available-spaces)))
 
 (defn add-tile-to-board [tile connections]
   (swap! board conj tile)
-  (add-to-available-spaces (surrounding-spaces tile))
-  (remove-from-available-spaces tile))
+  (reset! available-spaces (add-to-available-spaces (surrounding-spaces tile) @available-spaces))
+
+  (reset! available-spaces (remove-from-available-spaces tile @available-spaces))
+  )
 
 (use-fixtures :each (fn [test-to-run] 
   (reset! board #{})
@@ -54,10 +56,10 @@
   (is (= 1 (count @board)))
   (is (= 4 (count @available-spaces)))
   
-  (remove-from-available-spaces (space 1 0))
+  (reset! available-spaces (remove-from-available-spaces (space 1 0) @available-spaces))
   (is (= 3 (count @available-spaces)))
 
-  (remove-from-available-spaces (space 0 1))
+  (reset! available-spaces (remove-from-available-spaces (space 0 1) @available-spaces))
   (is (= 2 (count @available-spaces))))
 
 (deftest another-test
